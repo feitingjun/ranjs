@@ -1,0 +1,52 @@
+{
+  "name": "@ranjs/app",
+  "version": "0.0.1",
+  "description": "基于webpack的自用react脚手架",
+  "main": "dist/index.js",
+  "bin": {
+    "ran": "dist/bin/index.js"
+  },
+  "scripts": {
+    "create": "ran create",
+    "start": "ts-node build.ts -w -d",
+    "build": "ts-node build.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@babel/preset-env": "^7.26.0",
+    "@inquirer/prompts": "^7.2.0",
+    "@pmmmwh/react-refresh-webpack-plugin": "^0.5.15",
+    "babel-loader": "^9.2.1",
+    "chokidar": "^4.0.3",
+    "commander": "^12.1.0",
+    "css-loader": "^7.1.2",
+    "express": "^4.21.2",
+    "handlebars": "^4.7.8",
+    "html-webpack-plugin": "^5.6.3",
+    "http-proxy-middleware": "^3.0.3",
+    "less-loader": "^12.2.0",
+    "react-refresh": "^0.16.0",
+    "style-loader": "^4.0.0",
+    "ts-loader": "^9.5.1",
+    "webpack": "^5.97.1",
+    "webpack-dev-middleware": "^7.4.2",
+    "webpack-hot-middleware": "^2.26.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.1",
+    "@types/webpack-hot-middleware": "^2.25.9",
+    "glob": "^10.4.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router": "^7.1.1",
+    "typescript": "^5.7.2"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-dom": ">=19",
+    "react-router": ">=7"
+  }
+}

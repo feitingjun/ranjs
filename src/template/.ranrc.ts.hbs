@@ -1,0 +1,5 @@
+import { defineRanConfig } from '@ranjs/app'
+
+export default defineRanConfig({
+  {{#unless (isEqual srcDir "src")}}'srcDir': '{{srcDir}}'{{/unless}}
+})
