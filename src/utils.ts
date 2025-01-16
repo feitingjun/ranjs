@@ -8,7 +8,7 @@ export function getLocalIp(){
   const interfaces = networkInterfaces()
   for (const iface in interfaces) {
     if(!interfaces[iface]) continue
-    for (const alias of interfaces[iface]) {
+    for (const alias of interfaces[iface]??[]) {
       // 过滤IPv4地址，排除127.0.0.1（localhost）
       if (alias.family === 'IPv4' && !alias.internal) {
         return alias.address;

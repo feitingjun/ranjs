@@ -1,83 +1,69 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.writePackageJson = writePackageJson;
-exports.writeTsConfigJson = writeTsConfigJson;
-exports.writeRanrcTs = writeRanrcTs;
-exports.writeAppTs = writeAppTs;
-exports.writeIndexPageTsx = writeIndexPageTsx;
-exports.writeRanIndexts = writeRanIndexts;
-exports.writeEntryTsx = writeEntryTsx;
-exports.writeRanTypesTs = writeRanTypesTs;
-exports.writeRanDefineTs = writeRanDefineTs;
-exports.writeRanRoutesTs = writeRanRoutesTs;
-exports.wirteRuntime = wirteRuntime;
-exports.createTmpDir = createTmpDir;
-const fs_1 = require("fs");
-const path_1 = require("path");
-const hbs_1 = require("./hbs");
-const TML_DIR = (0, path_1.resolve)(__dirname, 'template');
+import { existsSync, mkdirSync, readFileSync } from 'fs';
+import { resolve } from 'path';
+import { renderHbsTpl } from "./hbs.js";
+const TML_DIR = resolve(__dirname, 'template');
 /**写入package.json文件 */
-function writePackageJson(root, description) {
-    const packageJson = (0, fs_1.readFileSync)((0, path_1.resolve)(__dirname, '../', 'package.json'), 'utf-8');
+export function writePackageJson(root, description) {
+    const packageJson = readFileSync(resolve(__dirname, '../', 'package.json'), 'utf-8');
     const { version } = JSON.parse(packageJson);
     const path = root.split('/');
-    (0, hbs_1.renderHbsTpl)({
-        sourcePath: (0, path_1.resolve)(TML_DIR, 'package.json.hbs'),
-        outPath: (0, path_1.resolve)(root, 'package.json'),
+    renderHbsTpl({
+        sourcePath: resolve(TML_DIR, 'package.json.hbs'),
+        outPath: resolve(root, 'package.json'),
         data: { projectName: path[path.length - 1], description, version }
     });
 }
 /**写入tsconfig.json文件 */
-function writeTsConfigJson(root, srcDir) {
-    (0, hbs_1.renderHbsTpl)({
-        sourcePath: (0, path_1.resolve)(TML_DIR, 'tsconfig.json.hbs'),
-        outPath: (0, path_1.resolve)(root, 'tsconfig.json'),
+export function writeTsConfigJson(root, srcDir) {
+    renderHbsTpl({
+        sourcePath: resolve(TML_DIR, 'tsconfig.json.hbs'),
+        outPath: resolve(root, 'tsconfig.json'),
         data: { srcDir, srcDirRoot: srcDir.split('/')[0] }
     });
 }
 /**写入ranrc.ts文件 */
-function writeRanrcTs(root, srcDir) {
-    (0, hbs_1.renderHbsTpl)({
-        sourcePath: (0, path_1.resolve)(TML_DIR, '.ranrc.ts.hbs'),
-        outPath: (0, path_1.resolve)(root, '.ranrc.ts'),
+export function writeRanrcTs(root, srcDir) {
+    renderHbsTpl({
+        sourcePath: resolve(TML_DIR, '.ranrc.ts.hbs'),
+        outPath: resolve(root, '.ranrc.ts'),
         data: { srcDir }
     });
 }
 /**写入app.ts文件 */
-function writeAppTs(root, srcDir) {
-    (0, hbs_1.renderHbsTpl)({
-        sourcePath: (0, path_1.resolve)(TML_DIR, 'app.ts.hbs'),
-        outPath: (0, path_1.resolve)(root, srcDir, 'app.ts'),
+export function writeAppTs(root, srcDir) {
+    renderHbsTpl({
+        sourcePath: resolve(TML_DIR, 'app.ts.hbs'),
+        outPath: resolve(root, srcDir, 'app.ts'),
     });
 }
 /**写入page.tsx文件 */
-function writeIndexPageTsx(root, srcDir) {
-    (0, hbs_1.renderHbsTpl)({
-        sourcePath: (0, path_1.resolve)(TML_DIR, 'page.tsx.hbs'),
-        outPath: (0, path_1.resolve)(root, srcDir, 'page.tsx'),
+export function writeIndexPageTsx(root, srcDir) {
+    renderHbsTpl({
+        sourcePath: resolve(TML_DIR, 'page.tsx.hbs'),
+        outPath: resolve(root, srcDir, 'page.tsx'),
     });
 }
 /**创建.ran/index.ts文件 */
-function writeRanIndexts(tmpDir, exports) {
-    (0, hbs_1.renderHbsTpl)({
-        sourcePath: (0, path_1.resolve)(TML_DIR, 'index.ts.hbs'),
-        outPath: (0, path_1.resolve)(tmpDir, 'index.ts'),
+export function writeRanIndexts(tmpDir, exports) {
+    renderHbsTpl({
+        sourcePath: resolve(TML_DIR, 'index.ts.hbs'),
+        outPath: resolve(tmpDir, 'index.ts'),
         data: { exports }
     });
 }
 /**创建.ran/entry.tsx文件 */
-function writeEntryTsx(tmpDir, data) {
-    (0, hbs_1.renderHbsTpl)({
-        sourcePath: (0, path_1.resolve)(TML_DIR, 'entry.tsx.hbs'),
-        outPath: (0, path_1.resolve)(tmpDir, 'entry.tsx'),
+export function writeEntryTsx(tmpDir, data) {
+    renderHbsTpl({
+        sourcePath: resolve(TML_DIR, 'entry.tsx.hbs'),
+        outPath: resolve(tmpDir, 'entry.tsx'),
         data: {
             ...data,
-            srcDir: (0, path_1.resolve)(tmpDir, '..')
+            srcDir: resolve(tmpDir, '..')
         }
     });
 }
 /**写入.san/types.ts */
-function writeRanTypesTs(tmpDir, pageConfigTypes = [], appConfigTypes = []) {
+export function writeRanTypesTs(tmpDir, pageConfigTypes = [], appConfigTypes = []) {
     const all = [...pageConfigTypes, ...appConfigTypes].reduce((acc, item) => {
         const index = acc.findIndex(v => v.source === item.source);
         if (index > -1 && Array.isArray(item.specifier) && Array.isArray(acc[index].specifier)) {
@@ -88,27 +74,27 @@ function writeRanTypesTs(tmpDir, pageConfigTypes = [], appConfigTypes = []) {
         }
         return acc;
     }, []);
-    (0, hbs_1.renderHbsTpl)({
-        sourcePath: (0, path_1.resolve)(TML_DIR, 'types.ts.hbs'),
-        outPath: (0, path_1.resolve)(tmpDir, 'types.ts'),
+    renderHbsTpl({
+        sourcePath: resolve(TML_DIR, 'types.ts.hbs'),
+        outPath: resolve(tmpDir, 'types.ts'),
         data: { all, pageConfigTypes, appConfigTypes }
     });
 }
 /**写入.san/define.ts */
-function writeRanDefineTs(tmpDir) {
-    (0, hbs_1.renderHbsTpl)({
-        sourcePath: (0, path_1.resolve)(TML_DIR, 'define.ts.hbs'),
+export function writeRanDefineTs(tmpDir) {
+    renderHbsTpl({
+        sourcePath: resolve(TML_DIR, 'define.ts.hbs'),
         outPath: `${tmpDir}/define.ts`,
         data: {
-            srcDir: (0, path_1.resolve)(tmpDir, '..')
+            srcDir: resolve(tmpDir, '..')
         }
     });
 }
 /**写入.ran/manifest.ts */
-function writeRanRoutesTs(tmpDir, manifest) {
-    (0, hbs_1.renderHbsTpl)({
-        sourcePath: (0, path_1.resolve)(TML_DIR, 'manifest.ts.hbs'),
-        outPath: (0, path_1.resolve)(tmpDir, 'manifest.ts'),
+export function writeRanRoutesTs(tmpDir, manifest) {
+    renderHbsTpl({
+        sourcePath: resolve(TML_DIR, 'manifest.ts.hbs'),
+        outPath: resolve(tmpDir, 'manifest.ts'),
         data: { manifest: Object.values(manifest).sort((a, b) => {
                 const nA = a.id.replace(/\/?layout/, ''), nB = b.id.replace(/\/?layout/, '');
                 return nA.length === nB.length ? b.id.indexOf('layout') : nA.length - nB.length;
@@ -116,19 +102,19 @@ function writeRanRoutesTs(tmpDir, manifest) {
     });
 }
 /**写入.san/runtimes.ts */
-function wirteRuntime(tmpDir, runtimes) {
-    (0, hbs_1.renderHbsTpl)({
-        sourcePath: (0, path_1.resolve)(TML_DIR, 'runtime.ts.hbs'),
-        outPath: (0, path_1.resolve)(tmpDir, 'runtime.ts'),
+export function wirteRuntime(tmpDir, runtimes) {
+    renderHbsTpl({
+        sourcePath: resolve(TML_DIR, 'runtime.ts.hbs'),
+        outPath: resolve(tmpDir, 'runtime.ts'),
         data: { runtimes }
     });
 }
 /**创建临时文件夹 */
-function createTmpDir({ root, srcDir, options }) {
+export function createTmpDir({ root, srcDir, options }) {
     const { manifest = {}, pageConfigTypes, appConfigTypes, exports, imports, aheadCodes, tailCodes, runtimes } = options;
-    const tmpDir = (0, path_1.resolve)(root, srcDir, '.ran');
-    if (!(0, fs_1.existsSync)(tmpDir)) {
-        (0, fs_1.mkdirSync)(tmpDir, { recursive: true });
+    const tmpDir = resolve(root, srcDir, '.ran');
+    if (!existsSync(tmpDir)) {
+        mkdirSync(tmpDir, { recursive: true });
     }
     // 创建.ran/index.ts文件
     writeRanIndexts(tmpDir, exports);

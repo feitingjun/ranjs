@@ -1,8 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.rules = exports.extensions = void 0;
-exports.extensions = ['.ts', '.tsx', '.js', '.jsx', '.json', '.css', '.less', '.page.tsx'];
-exports.rules = [{
+export const extensions = ['.ts', '.tsx', '.js', '.jsx', '.json', '.css', '.less', '.page.tsx'];
+export const rules = [{
         test: /\.tsx?$/,
         use: {
             loader: 'ts-loader',

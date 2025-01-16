@@ -1,26 +1,21 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const fs_1 = require("fs");
-const server_1 = require("react-dom/server");
-const html_webpack_plugin_1 = __importDefault(require("html-webpack-plugin"));
-const react_1 = require("react");
-const glob_1 = require("glob");
-const chokidar_1 = __importDefault(require("chokidar"));
-const path_1 = require("path");
-const utils_1 = require("../utils");
-const hbs_1 = require("../hbs");
-const writeFile_1 = require("../writeFile");
-const config_1 = require("./config");
+import { writeFileSync, existsSync } from 'fs';
+import { renderToString } from 'react-dom/server';
+import HtmlWebpackPlugin from 'html-webpack-plugin';
+import { createElement } from 'react';
+import { globSync } from 'glob';
+import chokidar from 'chokidar';
+import { resolve } from 'path';
+import { dynamicImport } from "../utils.js";
+import { renderHbsTpl } from "../hbs.js";
+import { createTmpDir, writeRanRoutesTs } from "../writeFile.js";
+import { extensions, rules } from "./config.js";
 /**插件功能
  * 1、加载.ranrc.ts并合并到webpack的配置
  * 2、自动生成.ran临时文件夹
  * 3、监听文件变更并自动生成路由清单
  * 4、提供ran插件功能
  */
-class CorePlugin {
+export default class CorePlugin {
     // 用户配置
     userConfig;
     // 额外的pageConfig类型
@@ -42,7 +37,7 @@ class CorePlugin {
     compiler;
     constructor() {
         // 获取用户配置
-        this.userConfig = (0, utils_1.dynamicImport)((0, path_1.resolve)(process.cwd(), '.ranrc.ts')).default;
+        this.userConfig = dynamicImport(resolve(process.cwd(), '.ranrc.ts')).default;
     }
     apply(compiler) {
         // 加载插件
@@ -56,7 +51,7 @@ class CorePlugin {
         this.addHtmlTemplate();
         // 添加webpack的entry
         compiler.hooks.entryOption.tap('entryOption', (ctx, entry) => {
-            entry.main.import.push((0, path_1.resolve)(ctx, this.userConfig.srcDir ?? 'src', '.ran', 'entry.tsx'));
+            entry.main.import.push(resolve(ctx, this.userConfig.srcDir ?? 'src', '.ran', 'entry.tsx'));
         });
         // compiler.hooks.compilation.tap('compilation', (compilation) => {
         // 添加html模板
@@ -70,7 +65,7 @@ class CorePlugin {
     watchFiles() {
         if (this.compiler?.options.mode !== 'development')
             return;
-        const watcher = chokidar_1.default.watch((0, path_1.resolve)(process.cwd()), {
+        const watcher = chokidar.watch(resolve(process.cwd()), {
             ignored: [/node_modules/],
             persistent: true,
             cwd: process.cwd()
@@ -78,19 +73,19 @@ class CorePlugin {
         watcher.on('all', (event, path) => {
             if (this.needGenerateRoutes(path)) {
                 const manifest = this.generateRouteManifest();
-                (0, writeFile_1.writeRanRoutesTs)((0, path_1.resolve)(process.cwd(), this.userConfig.srcDir ?? 'src', '.ran'), manifest);
+                writeRanRoutesTs(resolve(process.cwd(), this.userConfig.srcDir ?? 'src', '.ran'), manifest);
             }
             this.watchers.forEach(watcher => watcher(event, path));
         });
     }
     /**加载html模板 */
     addHtmlTemplate() {
-        let tmpl = (0, path_1.resolve)(process.cwd(), this.userConfig.srcDir ?? 'src', 'document.tsx');
-        if (!(0, fs_1.existsSync)(tmpl)) {
-            tmpl = (0, path_1.resolve)(__dirname, '..', 'template', 'index.html');
+        let tmpl = resolve(process.cwd(), this.userConfig.srcDir ?? 'src', 'document.tsx');
+        if (!existsSync(tmpl)) {
+            tmpl = resolve(__dirname, '..', 'template', 'index.html');
         }
         // 添加HtmlWebpackPlugin插件
-        this.compiler.options.plugins.push(new html_webpack_plugin_1.default({
+        this.compiler.options.plugins.push(new HtmlWebpackPlugin({
             template: tmpl,
             cache: false,
             inject: 'body'
@@ -99,22 +94,22 @@ class CorePlugin {
     }
     /**获取html */
     getHtmlText(assets) {
-        let htmlTmp = (0, path_1.resolve)(process.cwd(), this.userConfig.srcDir ?? 'src', 'document.tsx');
-        if (!(0, fs_1.existsSync)(htmlTmp)) {
-            htmlTmp = (0, path_1.resolve)(__dirname, '..', '..', 'template', 'document.tsx');
+        let htmlTmp = resolve(process.cwd(), this.userConfig.srcDir ?? 'src', 'document.tsx');
+        if (!existsSync(htmlTmp)) {
+            htmlTmp = resolve(__dirname, '..', '..', 'template', 'document.tsx');
         }
-        const module = (0, utils_1.dynamicImport)(htmlTmp).default;
+        const module = dynamicImport(htmlTmp).default;
         const names = Object.keys(assets);
-        const html = (0, server_1.renderToString)(module({
+        const html = renderToString(module({
             Scripts: () => names.filter(name => name.endsWith('.js')).map(name => {
-                return (0, react_1.createElement)('script', { key: name, src: `${this.compiler.options.output.publicPath}${name}` });
+                return createElement('script', { key: name, src: `${this.compiler.options.output.publicPath}${name}` });
             })
         }));
         return html;
     }
     /**创建临时文件夹 */
     createTmpDir() {
-        (0, writeFile_1.createTmpDir)({
+        createTmpDir({
             root: process.cwd(),
             srcDir: this.userConfig.srcDir || 'src',
             options: {
@@ -143,15 +138,15 @@ class CorePlugin {
         if (publicPath)
             config.output.publicPath = publicPath;
         if (outputDir)
-            config.output.path = (0, path_1.resolve)(process.cwd(), outputDir);
+            config.output.path = resolve(process.cwd(), outputDir);
         if (proxy)
             config.devServer.proxy = proxy;
         if (webpackPlugins)
             config.plugins.push(...webpackPlugins);
-        config.module.rules.push(...config_1.rules);
+        config.module.rules.push(...rules);
         if (!config.resolve.extensions)
             config.resolve.extensions = [];
-        config.resolve.extensions.push(...config_1.extensions);
+        config.resolve.extensions.push(...extensions);
         if (!config.resolve.mainFiles)
             config.resolve.mainFiles = [];
         config.resolve.mainFiles.push('index');
@@ -160,8 +155,8 @@ class CorePlugin {
             webpack(config);
         config.watch = true;
         config.resolve.alias = {
-            '@': (0, path_1.resolve)(process.cwd(), srcDir.split('/')[0]),
-            'ran': (0, path_1.resolve)(process.cwd(), srcDir, '.ran'),
+            '@': resolve(process.cwd(), srcDir.split('/')[0]),
+            'ran': resolve(process.cwd(), srcDir, '.ran'),
             ...alias
         };
     }
@@ -201,15 +196,15 @@ class CorePlugin {
     }
     /**生成路由清单 */
     generateRouteManifest() {
-        const srcDir = (0, path_1.resolve)(process.cwd(), this.userConfig.srcDir ?? 'src');
+        const srcDir = resolve(process.cwd(), this.userConfig.srcDir ?? 'src');
         // 获取页面根目录
-        const pageDir = (0, fs_1.existsSync)(srcDir + '/pages') ? 'pages' : '';
+        const pageDir = existsSync(srcDir + '/pages') ? 'pages' : '';
         // 获取全局layout
-        const rootLayout = (0, glob_1.globSync)('layout{s,}{/index,}.tsx', { cwd: srcDir });
+        const rootLayout = globSync('layout{s,}{/index,}.tsx', { cwd: srcDir });
         // 获取所有页面
         const include = ['**/*{[^/],}page.tsx', '**/layout{/index,}.tsx'];
         const ignore = ['**/layout/**/*{[^/],}page.tsx', '**/layout/**/layout.tsx'];
-        const pages = (0, glob_1.globSync)(include, { cwd: (0, path_1.resolve)(srcDir, pageDir), ignore });
+        const pages = globSync(include, { cwd: resolve(srcDir, pageDir), ignore });
         // 获取id和文件的映射
         const idpaths = pages.reduce((prev, file) => {
             const id = file
@@ -245,7 +240,7 @@ class CorePlugin {
                     parentId,
                     path: id === '/' ? '' : id.replace(regex, ''),
                     pathname: id.replace(/\/?layout?$/, ''),
-                    file: (0, path_1.resolve)(srcDir, pageDir, idpaths[id]),
+                    file: resolve(srcDir, pageDir, idpaths[id]),
                     layout: id.endsWith('layout')
                 }
             };
@@ -259,7 +254,7 @@ class CorePlugin {
                 id: 'rootLayout',
                 path: '',
                 pathname: '',
-                file: (0, path_1.resolve)(srcDir, rootLayout[0]),
+                file: resolve(srcDir, rootLayout[0]),
                 layout: true
             };
         }
@@ -274,7 +269,7 @@ class CorePlugin {
         // 匹配以(.)page.tsx | layout.tsx | layout/index.tsx 结尾且page.tsx不在layout(s)下的文件
         const isPageOrLayout = /^(?:(?!.*(layout|layouts)\/.*page\.tsx).)*\/((\S+\.)?page\.tsx|layout(\/index)?\.tsx)$/.test(path);
         // 是否在指定的pages目录下
-        const inPagesDir = (0, fs_1.existsSync)((0, path_1.resolve)(process.cwd(), srcDir, 'pages')) ? path.startsWith(`${srcDir}/pages`) : path.startsWith(srcDir);
+        const inPagesDir = existsSync(resolve(process.cwd(), srcDir, 'pages')) ? path.startsWith(`${srcDir}/pages`) : path.startsWith(srcDir);
         return (isRootLayout || (isPageOrLayout && inPagesDir) || path === srcDir || path === `${srcDir}/pages`);
     }
     /**修改用户配置 */
@@ -283,11 +278,11 @@ class CorePlugin {
     };
     /**添加文件 */
     addFile = ({ content, outPath }) => {
-        (0, fs_1.writeFileSync)(outPath, content);
+        writeFileSync(outPath, content);
     };
     /**根据Handlebars模板写入文件 */
     addFileTemplate = (options) => {
-        (0, hbs_1.renderHbsTpl)(options);
+        renderHbsTpl(options);
     };
     /**添加额外的pageConfig的配置类型 */
     addPageConfigType = (options) => {
@@ -314,5 +309,4 @@ class CorePlugin {
         this.tailCodes.push(code);
     };
 }
-exports.default = CorePlugin;
 //# sourceMappingURL=index.js.map

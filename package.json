@@ -3,13 +3,14 @@
   "version": "0.0.1",
   "description": "基于webpack的自用react脚手架",
   "main": "dist/index.js",
+  "type": "module",
   "bin": {
     "ran": "dist/bin/index.js"
   },
   "scripts": {
     "create": "ran create",
-    "start": "ts-node build.ts -w -d",
-    "build": "ts-node build.ts"
+    "start": "node build.js -w -d",
+    "build": "node build.js"
   },
   "author": "",
   "license": "ISC",
