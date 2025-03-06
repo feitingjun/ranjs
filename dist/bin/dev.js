@@ -5,7 +5,7 @@ import express from 'express';
 import webpackDevMiddleware from 'webpack-dev-middleware';
 import webpackHotMiddleware from 'webpack-hot-middleware';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import config from './webpack.config';
+import config from "./webpack.config.js";
 import { chalk, getLocalIp } from "../utils.js";
 // 启动开发服务器
 const startServer = (app, port) => {

@@ -9,6 +9,7 @@ import { dynamicImport } from "../utils.js";
 import { renderHbsTpl } from "../hbs.js";
 import { createTmpDir, writeRanRoutesTs } from "../writeFile.js";
 import { extensions, rules } from "./config.js";
+const __dirname = import.meta.dirname;
 /**插件功能
  * 1、加载.ranrc.ts并合并到webpack的配置
  * 2、自动生成.ran临时文件夹
@@ -17,7 +18,7 @@ import { extensions, rules } from "./config.js";
  */
 export default class CorePlugin {
     // 用户配置
-    userConfig;
+    userConfig = {};
     // 额外的pageConfig类型
     pageConfigTypes = [];
     // 额外的appConfig类型
@@ -35,13 +36,14 @@ export default class CorePlugin {
     // 运行时配置
     runtimes = [];
     compiler;
-    constructor() {
+    // apply之前执行的函数
+    async prepare() {
         // 获取用户配置
-        this.userConfig = dynamicImport(resolve(process.cwd(), '.ranrc.ts')).default;
+        this.userConfig = (await dynamicImport(resolve(process.cwd(), '.ranrc.ts'))).default;
+        // 加载插件
+        await this.laodPlugins();
     }
     apply(compiler) {
-        // 加载插件
-        this.laodPlugins();
         // 创建临时文件夹并且写入临时文件
         this.createTmpDir();
         // 合并配置
@@ -93,12 +95,12 @@ export default class CorePlugin {
         return tmpl;
     }
     /**获取html */
-    getHtmlText(assets) {
+    async getHtmlText(assets) {
         let htmlTmp = resolve(process.cwd(), this.userConfig.srcDir ?? 'src', 'document.tsx');
         if (!existsSync(htmlTmp)) {
             htmlTmp = resolve(__dirname, '..', '..', 'template', 'document.tsx');
         }
-        const module = dynamicImport(htmlTmp).default;
+        const module = (await dynamicImport(htmlTmp)).default;
         const names = Object.keys(assets);
         const html = renderToString(module({
             Scripts: () => names.filter(name => name.endsWith('.js')).map(name => {
@@ -161,11 +163,11 @@ export default class CorePlugin {
         };
     }
     /**加载插件 */
-    laodPlugins() {
+    async laodPlugins() {
+        const pkg = await import(`${process.cwd()}/package.json`);
         this.userConfig.plugins?.forEach(plugin => {
             const { runtime, setup } = plugin;
             const srcDir = this.userConfig.srcDir || 'src';
-            const pkg = require(`${process.cwd()}/package.json`);
             const context = {
                 mode: process.env.NODE_ENV,
                 root: process.cwd(),

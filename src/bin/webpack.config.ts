@@ -1,7 +1,9 @@
-import { Configuration, HotModuleReplacementPlugin } from 'webpack'
+import webpack, { Configuration } from 'webpack'
 import ReactRefreshWebpackPlugin from '@pmmmwh/react-refresh-webpack-plugin'
 import { resolve } from 'path'
 import CorePlugin from '../core'
+
+const { HotModuleReplacementPlugin } = webpack
 
 export default {
   entry: ['webpack-hot-middleware/client?reload=true'],
@@ -11,6 +13,7 @@ export default {
     filename: 'ran.js',
     publicPath: '/'
   },
+  devtool: 'source-map',
   optimization: {
     
   },

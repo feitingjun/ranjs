@@ -3,6 +3,7 @@ import { resolve } from 'path'
 import { renderHbsTpl } from './hbs'
 import { RouteManifest, AddFileOptions, MakePropertyOptional } from './core/types'
 
+const __dirname = import.meta.dirname
 const TML_DIR = resolve(__dirname, 'template')
 
 /**写入package.json文件 */

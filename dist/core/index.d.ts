@@ -17,7 +17,7 @@ export default class CorePlugin {
     watchers: PluginWatcher[];
     runtimes: string[];
     compiler?: Compiler;
-    constructor();
+    prepare(): Promise<void>;
     apply(compiler: Compiler): void;
     /**处理文件监听 */
     watchFiles(): void;
@@ -26,13 +26,13 @@ export default class CorePlugin {
     /**获取html */
     getHtmlText(assets: {
         [key: string]: webpack.sources.Source;
-    }): string;
+    }): Promise<string>;
     /**创建临时文件夹 */
     createTmpDir(): void;
     /**合并配置 */
     mergeConfig(config: WebpackOptionsNormalized): void;
     /**加载插件 */
-    laodPlugins(): void;
+    laodPlugins(): Promise<void>;
     /**watch函数列表 */
     addWatch(fn: PluginWatcher): void;
     /**生成路由清单 */

@@ -29,7 +29,7 @@ export const chalk = {
     }
 };
 /**commonjs动态导入ts方案 */
-export function dynamicImport(source) {
+export async function dynamicImport(source) {
     const ext = extname(source);
     // 创建临时文件夹
     const tempDir = resolve(process.cwd(), 'node_modules', '.temp');
@@ -42,7 +42,7 @@ export function dynamicImport(source) {
         fileName: source,
         compilerOptions: {
             target: ts.ScriptTarget.ES5,
-            module: ts.ModuleKind.CommonJS,
+            module: ts.ModuleKind.ES2020,
             sourceMap: true,
             sourceRoot: dirname(source),
             jsx: JsxEmit.ReactJSX,
@@ -52,9 +52,9 @@ export function dynamicImport(source) {
     });
     const jsCode = result.outputText;
     // 写入临时文件
-    const path = resolve(tempDir, filename + '.js');
+    const path = resolve(tempDir, filename + '.mjs');
     writeFileSync(path, jsCode);
-    writeFileSync(resolve(tempDir, filename + '.js.map'), result.sourceMapText);
-    return require(path);
+    writeFileSync(resolve(tempDir, filename + '.mjs.map'), result.sourceMapText);
+    return await import(path);
 }
 //# sourceMappingURL=utils.js.map

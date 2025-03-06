@@ -6,4 +6,4 @@ export declare const chalk: {
     red: (text: string) => string;
 };
 /**commonjs动态导入ts方案 */
-export declare function dynamicImport(source: string): any;
+export declare function dynamicImport(source: string): Promise<any>;

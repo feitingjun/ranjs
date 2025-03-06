@@ -4,11 +4,10 @@ import { dirname, extname, resolve, join } from 'path'
 
 // 判断是否需要添加后缀
 const needAddSuffix = (dir, libname) => {
-  if (extname(libname)) return
-  for (const ext of ['.js', '.ts']) {
+  for (const ext of ['.js', '.ts', '/index.js', '/index.ts']) {
     const path = resolve(dir, libname + ext)
     if (fs.existsSync(path)) {
-      return true
+      return ext.replace('ts', 'js')
     }
   }
 }
@@ -62,26 +61,47 @@ const build = () => {
         const dir = dirname(file.fileName)
         const visitor = (node) => {
           const libname = node.moduleSpecifier?.text
-          if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier) && needAddSuffix(dir, libname)) {
-            // 更新导入声明
-            return ts.factory.updateImportDeclaration(
-              node,
-              node.modifiers,
-              node.importClause,
-              ts.factory.createStringLiteral(libname + '.js'),
-              node.attributes
-            )
+          // 给 import x from 'x' 这种格式添加后缀名
+          if(ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+            const ext = needAddSuffix(dir, libname)
+            if(ext){
+              // 更新导入声明
+              return ts.factory.updateImportDeclaration(
+                node,
+                node.modifiers,
+                node.importClause,
+                ts.factory.createStringLiteral(libname + ext),
+                node.attributes
+              )
+            }
           }
-          if (ts.isExportDeclaration(node) && !node.exportClause && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier) && needAddSuffix(dir, libname)) {
-            return ts.factory.updateExportDeclaration(
-              node,
-              node.modifiers,
-              node.isTypeOnly,
-              node.exportClause,
-              ts.factory.createStringLiteral(libname + '.js'),
-              node.attributes
-            )
+          // 给 export x from 'x' 这种格式添加后缀名
+          if(ts.isExportDeclaration(node) && !node.exportClause && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
+            const ext = needAddSuffix(dir, libname)
+            if(ext){
+              return ts.factory.updateExportDeclaration(
+                node,
+                node.modifiers,
+                node.isTypeOnly,
+                node.exportClause,
+                ts.factory.createStringLiteral(libname + ext),
+                node.attributes
+              )
+            }
           }
+          // 给 import('x') 这种格式添加后缀名
+          if(ts.isCallExpression(node) && node.arguments?.[0] && ts.isStringLiteral(node.arguments[0]) && node.expression.getText() === 'import') {
+            const ext = needAddSuffix(dir, node.arguments[0].text)
+            if(ext){
+              return ts.factory.updateCallExpression(
+                node,
+                node.expression,
+                node.typeArguments,
+                [ts.factory.createStringLiteral(node.arguments[0].text + ext)],
+              )
+            }
+          }
+
           return ts.visitEachChild(node, visitor, ctx);
         }
         return ts.visitNode(file, visitor);

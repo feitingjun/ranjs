@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import { renderHbsTpl } from "./hbs.js";
+const __dirname = import.meta.dirname;
 const TML_DIR = resolve(__dirname, 'template');
 /**写入package.json文件 */
 export function writePackageJson(root, description) {
