@@ -14,7 +14,10 @@ export default {
     devtool: 'source-map',
     optimization: {},
     plugins: [
-        new ReactRefreshWebpackPlugin(),
+        new ReactRefreshWebpackPlugin({
+            overlay: false, // 禁用刷新错误提示
+            esModule: true, // 启用ES模块热更新，ESM需要设置为true，否则会报错
+        }),
         new HotModuleReplacementPlugin(),
         new CorePlugin()
     ]
