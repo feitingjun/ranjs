@@ -4,7 +4,7 @@ import { RanConfig, Plugin, Runtime } from './types'
 export function defineRanConfig(config: RanConfig){ return config }
 
 /**定义插件 */
-export function definePlugin(plugin:Plugin){ return plugin }
+export function definePlugin<T extends Plugin|((...args:any[]) => Plugin)>(plugin:T){ return plugin }
 
 /**定义运行时函数 */
 export function defineRuntime(fn:Runtime){ return fn }

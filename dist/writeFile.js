@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import { renderHbsTpl } from "./hbs.js";
+import { deepClone } from "./utils.js";
 const __dirname = import.meta.dirname;
 const TML_DIR = resolve(__dirname, 'template');
 /**写入package.json文件 */
@@ -65,7 +66,7 @@ export function writeEntryTsx(tmpDir, data) {
 }
 /**写入.san/types.ts */
 export function writeRanTypesTs(tmpDir, pageConfigTypes = [], appConfigTypes = []) {
-    const all = [...pageConfigTypes, ...appConfigTypes].reduce((acc, item) => {
+    const all = deepClone([...pageConfigTypes, ...appConfigTypes]).reduce((acc, item) => {
         const index = acc.findIndex(v => v.source === item.source);
         if (index > -1 && Array.isArray(item.specifier) && Array.isArray(acc[index].specifier)) {
             acc[index].specifier = [...acc[index].specifier, ...item.specifier];

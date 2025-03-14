@@ -59,7 +59,7 @@ export type ManifestClient = {
 }
 
 /**app配置 */
-export type AppConfig<T extends Record<string, unknown>={}, D extends Record<string, unknown>={}> = {
+export type AppConfig<T extends {}={}, D extends Record<string, unknown>={}> = {
   // 根节点，默认app
   root?: string
   // 是否启用react的严格模式

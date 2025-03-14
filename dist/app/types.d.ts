@@ -51,7 +51,7 @@ export type ManifestClient = {
     };
 };
 /**app配置 */
-export type AppConfig<T extends Record<string, unknown> = {}, D extends Record<string, unknown> = {}> = {
+export type AppConfig<T extends {} = {}, D extends Record<string, unknown> = {}> = {
     root?: string;
     strict?: boolean;
     router?: 'hash' | 'browser' | 'memory';

@@ -28,6 +28,12 @@ export interface RanConfig {
   webpackPlugins?: DefinePlugin[]
   /**修改webpack配置 */
   webpack?: (config: WebpackOptionsNormalized) => WebpackOptionsNormalized
+  /**是否启用model插件 */
+  model?: boolean
+  /**是否启用keepAlive插件 */
+  keepAlive?: boolean
+  /**是否启用access插件 */
+  access?: boolean
 }
 
 /**添加临时文件方法参数 */
@@ -37,9 +43,7 @@ export interface AddFileOptions {
 }
 
 /**使类型的某一个属性可选 */
-export type MakePropertyOptional<T, K extends keyof T> = {
-  [P in keyof T]: P extends K ? T[P] | undefined : T[P];
-}
+export type MakePropertyOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
 /**插件addWatch参数 */
 export type PluginWatcher = (event: EventName, pathname:string) => void
@@ -76,7 +80,7 @@ export interface PluginOptions {
   /**添加额外的appConfig类型 */
   addAppConfigType: (options: AddFileOptions) => void
   /**添加从ran命名空间导出的模块 */
-  addExport: (options: AddFileOptions) => void
+  addExport: (options: AddFileOptions & { type?: boolean }) => void
   /**在入口文件的最前面添加import */
   addEntryImport: (options: MakePropertyOptional<AddFileOptions, 'specifier'> ) => void
   /**在入口文件的最前插入代码 */
@@ -89,9 +93,7 @@ export interface PluginOptions {
 
 /**插件 */
 export interface Plugin {
-  setup?: (options: PluginOptions) => {
-    
-  },
+  setup?: (options: PluginOptions) => void,
   runtime?: string
 }
 

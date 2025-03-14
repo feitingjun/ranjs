@@ -7,3 +7,4 @@ export declare const chalk: {
 };
 /**commonjs动态导入ts方案 */
 export declare function dynamicImport(source: string): Promise<any>;
+export declare function deepClone<T>(obj: T): T;

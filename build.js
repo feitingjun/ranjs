@@ -2,7 +2,13 @@ import ts from 'typescript'
 import fs from 'fs'
 import { dirname, extname, resolve, join } from 'path'
 
-// 判断是否需要添加后缀
+/**
+ * 判断是否需要添加后缀
+ * 当引入的库名没有后缀名，但是目录中有对应的文件，需要添加后缀名
+ * @param {string} dir 当前文件所在目录
+ * @param {string} libname import 引入的库名
+ * @returns 
+ */
 const needAddSuffix = (dir, libname) => {
   for (const ext of ['.js', '.ts', '/index.js', '/index.ts']) {
     const path = resolve(dir, libname + ext)

@@ -1,4 +1,4 @@
-import { writeFileSync, existsSync } from 'fs';
+import { writeFileSync, existsSync, readFileSync } from 'fs';
 import { renderToString } from 'react-dom/server';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import { createElement } from 'react';
@@ -9,7 +9,12 @@ import { dynamicImport } from "../utils.js";
 import { renderHbsTpl } from "../hbs.js";
 import { createTmpDir, writeRanRoutesTs } from "../writeFile.js";
 import { extensions, rules } from "./config.js";
+import model from "../plugins/model/index.js";
+import keepAlive from "../plugins/keepAlive/index.js";
+import access from "../plugins/access/index.js";
 const __dirname = import.meta.dirname;
+// 获取用户配置
+const userConfig = (await dynamicImport(resolve(process.cwd(), '.ranrc.ts'))).default;
 /**插件功能
  * 1、加载.ranrc.ts并合并到webpack的配置
  * 2、自动生成.ran临时文件夹
@@ -36,25 +41,59 @@ export default class CorePlugin {
     // 运行时配置
     runtimes = [];
     compiler;
-    // apply之前执行的函数
-    async prepare() {
-        // 获取用户配置
-        this.userConfig = (await dynamicImport(resolve(process.cwd(), '.ranrc.ts'))).default;
-        // 加载插件
-        await this.laodPlugins();
+    constructor() {
+        this.userConfig = userConfig;
+        if (!userConfig.plugins)
+            userConfig.plugins = [];
+        if (userConfig.model)
+            userConfig.plugins.push(model);
+        if (userConfig.keepAlive)
+            userConfig.plugins.push(keepAlive);
+        if (userConfig.access)
+            userConfig.plugins.push(access);
     }
     apply(compiler) {
+        this.compiler = compiler;
+        // 加载插件
+        this.loadPlugins();
         // 创建临时文件夹并且写入临时文件
         this.createTmpDir();
         // 合并配置
         this.mergeConfig(compiler.options);
-        this.compiler = compiler;
         this.watchFiles();
         this.addHtmlTemplate();
         // 添加webpack的entry
         compiler.hooks.entryOption.tap('entryOption', (ctx, entry) => {
             entry.main.import.push(resolve(ctx, this.userConfig.srcDir ?? 'src', '.ran', 'entry.tsx'));
         });
+        // // 创建自定义hooks
+        // const prepare = new AsyncSeriesHook<[Compiler]>(['compiler'])
+        // // 注册自定义hooks函数
+        // prepare.tapAsync('prepare', async (compiler, cb) => {
+        //   const ctx = compiler.options.context??process.cwd()
+        //   // 处理entry配置，确保main入口存在
+        //   if (typeof compiler.options.entry === 'function') {
+        //     const originalEntry = compiler.options.entry
+        //     compiler.options.entry = async () => {
+        //       const entry = await originalEntry()
+        //       if (!entry.main) {
+        //         entry.main = { import: [] }
+        //       }
+        //       entry.main.import = entry.main.import || []
+        //       entry.main.import.push(resolve(ctx, this.userConfig.srcDir??'src', '.ran', 'entry.tsx'))
+        //       return entry
+        //     }
+        //   } else {
+        //     if (!compiler.options.entry.main) {
+        //       compiler.options.entry.main = { import: [] }
+        //     }
+        //     compiler.options.entry.main.import = compiler.options.entry.main.import || []
+        //     compiler.options.entry.main.import.push(resolve(ctx, this.userConfig.srcDir??'src', '.ran', 'entry.tsx'))
+        //   }
+        //   cb()
+        // })
+        // // 执行自定义hooks
+        // prepare.promise(compiler)
         // compiler.hooks.compilation.tap('compilation', (compilation) => {
         // 添加html模板
         // compilation.hooks.processAssets.tap('processAssets', (assets) => {
@@ -64,7 +103,7 @@ export default class CorePlugin {
         // })
     }
     /**处理文件监听 */
-    watchFiles() {
+    watchFiles = () => {
         if (this.compiler?.options.mode !== 'development')
             return;
         const watcher = chokidar.watch(resolve(process.cwd()), {
@@ -79,9 +118,9 @@ export default class CorePlugin {
             }
             this.watchers.forEach(watcher => watcher(event, path));
         });
-    }
+    };
     /**加载html模板 */
-    addHtmlTemplate() {
+    addHtmlTemplate = () => {
         let tmpl = resolve(process.cwd(), this.userConfig.srcDir ?? 'src', 'document.tsx');
         if (!existsSync(tmpl)) {
             tmpl = resolve(__dirname, '..', 'template', 'index.html');
@@ -93,9 +132,9 @@ export default class CorePlugin {
             inject: 'body'
         }));
         return tmpl;
-    }
+    };
     /**获取html */
-    async getHtmlText(assets) {
+    getHtmlText = async (assets) => {
         let htmlTmp = resolve(process.cwd(), this.userConfig.srcDir ?? 'src', 'document.tsx');
         if (!existsSync(htmlTmp)) {
             htmlTmp = resolve(__dirname, '..', '..', 'template', 'document.tsx');
@@ -108,9 +147,9 @@ export default class CorePlugin {
             })
         }));
         return html;
-    }
+    };
     /**创建临时文件夹 */
-    createTmpDir() {
+    createTmpDir = () => {
         createTmpDir({
             root: process.cwd(),
             srcDir: this.userConfig.srcDir || 'src',
@@ -125,9 +164,9 @@ export default class CorePlugin {
                 runtimes: this.runtimes
             }
         });
-    }
+    };
     /**合并配置 */
-    mergeConfig(config) {
+    mergeConfig = (config) => {
         const { port, open, publicPath = '/', outputDir = 'dist', srcDir = 'src', alias, proxy, webpackPlugins, webpack } = this.userConfig;
         if (!config.devServer)
             config.devServer = {};
@@ -161,10 +200,12 @@ export default class CorePlugin {
             'ran': resolve(process.cwd(), srcDir, '.ran'),
             ...alias
         };
-    }
+    };
     /**加载插件 */
-    async laodPlugins() {
-        const pkg = await import(`${process.cwd()}/package.json`);
+    loadPlugins = () => {
+        // 动态导入package.json
+        const pkgText = readFileSync(`${process.cwd()}/package.json`, 'utf-8');
+        const pkg = JSON.parse(pkgText);
         this.userConfig.plugins?.forEach(plugin => {
             const { runtime, setup } = plugin;
             const srcDir = this.userConfig.srcDir || 'src';
@@ -191,13 +232,13 @@ export default class CorePlugin {
                 addWatch: this.addWatch
             });
         });
-    }
+    };
     /**watch函数列表 */
-    addWatch(fn) {
+    addWatch = (fn) => {
         this.watchers.push(fn);
-    }
+    };
     /**生成路由清单 */
-    generateRouteManifest() {
+    generateRouteManifest = () => {
         const srcDir = resolve(process.cwd(), this.userConfig.srcDir ?? 'src');
         // 获取页面根目录
         const pageDir = existsSync(srcDir + '/pages') ? 'pages' : '';
@@ -261,9 +302,9 @@ export default class CorePlugin {
             };
         }
         return routesManifest;
-    }
+    };
     /**判断是否需要重新生成路由 */
-    needGenerateRoutes(path) {
+    needGenerateRoutes = (path) => {
         const srcDir = this.userConfig.srcDir || 'src';
         // 匹配src目录下的layout(s).tsx | layout(s)/index.tsx
         const regex = new RegExp(`^${srcDir}/(layout|layouts)(?:/index)?.tsx$`);
@@ -273,7 +314,7 @@ export default class CorePlugin {
         // 是否在指定的pages目录下
         const inPagesDir = existsSync(resolve(process.cwd(), srcDir, 'pages')) ? path.startsWith(`${srcDir}/pages`) : path.startsWith(srcDir);
         return (isRootLayout || (isPageOrLayout && inPagesDir) || path === srcDir || path === `${srcDir}/pages`);
-    }
+    };
     /**修改用户配置 */
     modifyUserConfig = (fn) => {
         this.userConfig = fn(this.userConfig);

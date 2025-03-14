@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync } from 'fs'
 import { resolve } from 'path'
 import { renderHbsTpl } from './hbs'
 import { RouteManifest, AddFileOptions, MakePropertyOptional } from './core/types'
+import { deepClone } from './utils'
 
 const __dirname = import.meta.dirname
 const TML_DIR = resolve(__dirname, 'template')
@@ -85,7 +86,7 @@ export function writeRanTypesTs(
   pageConfigTypes: AddFileOptions[]=[],
   appConfigTypes: AddFileOptions[]=[]
 ){
-  const all = [...pageConfigTypes, ...appConfigTypes].reduce((acc, item) => {
+  const all = deepClone([...pageConfigTypes, ...appConfigTypes]).reduce((acc, item) => {
     const index = acc.findIndex(v => v.source === item.source)
     if(index > -1 && Array.isArray(item.specifier) && Array.isArray(acc[index].specifier)) {
       acc[index].specifier = [...acc[index].specifier, ...item.specifier]

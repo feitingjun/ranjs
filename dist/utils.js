@@ -57,4 +57,8 @@ export async function dynamicImport(source) {
     writeFileSync(resolve(tempDir, filename + '.mjs.map'), result.sourceMapText);
     return await import(path);
 }
+// 深拷贝
+export function deepClone(obj) {
+    return JSON.parse(JSON.stringify(obj));
+}
 //# sourceMappingURL=utils.js.map

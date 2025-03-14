@@ -1,5 +1,5 @@
 import webpack, { Compiler, Configuration, WebpackOptionsNormalized } from 'webpack'
-import { writeFileSync, existsSync } from 'fs'
+import { writeFileSync, existsSync, readFileSync } from 'fs'
 import { renderToString } from 'react-dom/server'
 import HtmlWebpackPlugin from 'html-webpack-plugin'
 import { createElement } from 'react'
@@ -11,8 +11,14 @@ import { RanConfig, AddFileOptions, MakePropertyOptional, PluginOptions, RouteMa
 import { renderHbsTpl } from '../hbs'
 import { createTmpDir, writeRanRoutesTs } from '../writeFile'
 import { extensions, rules } from './config'
+import model from '../plugins/model'
+import keepAlive from '../plugins/keepAlive'
+import access from '../plugins/access'
 
 const __dirname = import.meta.dirname
+
+// 获取用户配置
+const userConfig:RanConfig = (await dynamicImport(resolve(process.cwd(), '.ranrc.ts'))).default
 
 /**插件功能
  * 1、加载.ranrc.ts并合并到webpack的配置
@@ -28,7 +34,7 @@ export default class CorePlugin {
   // 额外的appConfig类型
   appConfigTypes:AddFileOptions[] = []
   // 从ran命名空间导出的模块
-  exports:AddFileOptions[] = []
+  exports:(AddFileOptions & { type?: boolean })[] = []
   // 在入口文件中导入的模块
   imports:MakePropertyOptional<AddFileOptions, 'specifier'>[] = []
   // 在入口文件顶部插入的代码
@@ -41,26 +47,56 @@ export default class CorePlugin {
   runtimes:string[] = []
   compiler?: Compiler
 
-  // apply之前执行的函数
-  async prepare(){
-    // 获取用户配置
-    this.userConfig = (await dynamicImport(resolve(process.cwd(), '.ranrc.ts'))).default
-    // 加载插件
-    await this.laodPlugins()
+  constructor() {
+    this.userConfig = userConfig
+    if(!userConfig.plugins) userConfig.plugins = []
+    if(userConfig.model) userConfig.plugins.push(model)
+    if(userConfig.keepAlive) userConfig.plugins.push(keepAlive)
+    if(userConfig.access) userConfig.plugins.push(access)
   }
   apply(compiler: Compiler) {
+    this.compiler = compiler
+    // 加载插件
+    this.loadPlugins()
     // 创建临时文件夹并且写入临时文件
     this.createTmpDir()
     // 合并配置
     this.mergeConfig(compiler.options)
-    this.compiler = compiler
     this.watchFiles()
     this.addHtmlTemplate()
     // 添加webpack的entry
     compiler.hooks.entryOption.tap('entryOption', (ctx, entry:any) => {
       entry.main.import.push(resolve(ctx, this.userConfig.srcDir??'src', '.ran', 'entry.tsx'))
     })
-    
+
+    // // 创建自定义hooks
+    // const prepare = new AsyncSeriesHook<[Compiler]>(['compiler'])
+    // // 注册自定义hooks函数
+    // prepare.tapAsync('prepare', async (compiler, cb) => {
+    //   const ctx = compiler.options.context??process.cwd()
+    //   // 处理entry配置，确保main入口存在
+    //   if (typeof compiler.options.entry === 'function') {
+    //     const originalEntry = compiler.options.entry
+    //     compiler.options.entry = async () => {
+    //       const entry = await originalEntry()
+    //       if (!entry.main) {
+    //         entry.main = { import: [] }
+    //       }
+    //       entry.main.import = entry.main.import || []
+    //       entry.main.import.push(resolve(ctx, this.userConfig.srcDir??'src', '.ran', 'entry.tsx'))
+    //       return entry
+    //     }
+    //   } else {
+    //     if (!compiler.options.entry.main) {
+    //       compiler.options.entry.main = { import: [] }
+    //     }
+    //     compiler.options.entry.main.import = compiler.options.entry.main.import || []
+    //     compiler.options.entry.main.import.push(resolve(ctx, this.userConfig.srcDir??'src', '.ran', 'entry.tsx'))
+    //   }
+    //   cb()
+    // })
+    // // 执行自定义hooks
+    // prepare.promise(compiler)
     // compiler.hooks.compilation.tap('compilation', (compilation) => {
       // 添加html模板
       // compilation.hooks.processAssets.tap('processAssets', (assets) => {
@@ -70,7 +106,7 @@ export default class CorePlugin {
     // })
   }
   /**处理文件监听 */
-  watchFiles(){
+  watchFiles = () => {
     if(this.compiler?.options.mode !== 'development') return
     const watcher = chokidar.watch(resolve(process.cwd()), {
       ignored: [/node_modules/],
@@ -86,7 +122,7 @@ export default class CorePlugin {
     })
   }
   /**加载html模板 */
-  addHtmlTemplate(){
+  addHtmlTemplate = () => {
     let tmpl = resolve(process.cwd(), this.userConfig.srcDir??'src', 'document.tsx')
       if(!existsSync(tmpl)){
         tmpl = resolve(__dirname, '..', 'template', 'index.html')
@@ -100,7 +136,7 @@ export default class CorePlugin {
     return tmpl
   }
   /**获取html */
-  async getHtmlText(assets:{ [key: string]: webpack.sources.Source }){
+  getHtmlText = async (assets:{ [key: string]: webpack.sources.Source }) => {
     let htmlTmp = resolve(process.cwd(), this.userConfig.srcDir??'src', 'document.tsx')
     if(!existsSync(htmlTmp)){
       htmlTmp = resolve(__dirname, '..', '..', 'template', 'document.tsx')
@@ -115,7 +151,7 @@ export default class CorePlugin {
     return html
   }
   /**创建临时文件夹 */
-  createTmpDir(){
+  createTmpDir = () => {
     createTmpDir({
       root: process.cwd(),
       srcDir: this.userConfig.srcDir || 'src',
@@ -132,7 +168,7 @@ export default class CorePlugin {
     })
   }
   /**合并配置 */
-  mergeConfig(config:WebpackOptionsNormalized){
+  mergeConfig = (config:WebpackOptionsNormalized) => {
     const { port, open, publicPath='/', outputDir='dist', srcDir='src', alias, proxy, webpackPlugins, webpack } = this.userConfig
     if(!config.devServer) config.devServer = {}
     // 端口
@@ -158,8 +194,10 @@ export default class CorePlugin {
     }
   }
   /**加载插件 */
-  async laodPlugins(){
-    const pkg = await import(`${process.cwd()}/package.json`)
+  loadPlugins = () => {
+    // 动态导入package.json
+    const pkgText = readFileSync(`${process.cwd()}/package.json`, 'utf-8')
+    const pkg = JSON.parse(pkgText)
     this.userConfig.plugins?.forEach(plugin => {
       const { runtime, setup } = plugin
       const srcDir = this.userConfig.srcDir || 'src'
@@ -187,11 +225,11 @@ export default class CorePlugin {
     })
   }
   /**watch函数列表 */
-  addWatch(fn:PluginWatcher){
+  addWatch = (fn:PluginWatcher) =>{
     this.watchers.push(fn)
   }
   /**生成路由清单 */
-  generateRouteManifest(){
+  generateRouteManifest = () => {
     const srcDir = resolve(process.cwd(), this.userConfig.srcDir??'src')
     // 获取页面根目录
     const pageDir = existsSync(srcDir + '/pages') ? 'pages' : ''
@@ -258,7 +296,7 @@ export default class CorePlugin {
     return routesManifest
   }
   /**判断是否需要重新生成路由 */
-  needGenerateRoutes(path:string){
+  needGenerateRoutes = (path:string) => {
     const srcDir = this.userConfig.srcDir || 'src'
     // 匹配src目录下的layout(s).tsx | layout(s)/index.tsx
     const regex = new RegExp(`^${srcDir}/(layout|layouts)(?:/index)?.tsx$`)

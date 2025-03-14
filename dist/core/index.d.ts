@@ -10,35 +10,37 @@ export default class CorePlugin {
     userConfig: RanConfig;
     pageConfigTypes: AddFileOptions[];
     appConfigTypes: AddFileOptions[];
-    exports: AddFileOptions[];
+    exports: (AddFileOptions & {
+        type?: boolean;
+    })[];
     imports: MakePropertyOptional<AddFileOptions, 'specifier'>[];
     aheadCodes: string[];
     tailCodes: string[];
     watchers: PluginWatcher[];
     runtimes: string[];
     compiler?: Compiler;
-    prepare(): Promise<void>;
+    constructor();
     apply(compiler: Compiler): void;
     /**处理文件监听 */
-    watchFiles(): void;
+    watchFiles: () => void;
     /**加载html模板 */
-    addHtmlTemplate(): string;
+    addHtmlTemplate: () => string;
     /**获取html */
-    getHtmlText(assets: {
+    getHtmlText: (assets: {
         [key: string]: webpack.sources.Source;
-    }): Promise<string>;
+    }) => Promise<string>;
     /**创建临时文件夹 */
-    createTmpDir(): void;
+    createTmpDir: () => void;
     /**合并配置 */
-    mergeConfig(config: WebpackOptionsNormalized): void;
+    mergeConfig: (config: WebpackOptionsNormalized) => void;
     /**加载插件 */
-    laodPlugins(): Promise<void>;
+    loadPlugins: () => void;
     /**watch函数列表 */
-    addWatch(fn: PluginWatcher): void;
+    addWatch: (fn: PluginWatcher) => void;
     /**生成路由清单 */
-    generateRouteManifest(): RouteManifest;
+    generateRouteManifest: () => RouteManifest;
     /**判断是否需要重新生成路由 */
-    needGenerateRoutes(path: string): boolean;
+    needGenerateRoutes: (path: string) => boolean;
     /**修改用户配置 */
     modifyUserConfig: PluginOptions['modifyUserConfig'];
     /**添加文件 */

@@ -59,3 +59,8 @@ export async function dynamicImport(source:string){
   writeFileSync(resolve(tempDir, filename + '.mjs.map'), result.sourceMapText!)
   return await import(path)
 }
+
+// 深拷贝
+export function deepClone<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj))
+}
